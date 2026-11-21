@@ -1,6 +1,6 @@
 // Service worker: menyimpan aplikasi di HP supaya bisa dibuka tanpa internet.
 // Jika kamu mengubah file aplikasi, naikkan angka VERSI di bawah (misal v2).
-const VERSI = 'keuangan-v1';
+const VERSI = 'keuangan-v2';
 const FILES = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
