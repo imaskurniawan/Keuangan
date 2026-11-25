@@ -67,7 +67,7 @@ nav{position:fixed;left:0;right:0;bottom:0;display:grid;grid-template-columns:1f
 </section>
 
 <section id="v-bud" hidden>
- <div class="card"><button class="btn" id="ba">Atur budget</button></div>
+ <div class="card"><div class="two"><button class="btn" id="ba">Atur budget</button><button class="btn" id="bk" style="background:#fff;color:var(--tx);border:1px solid var(--bd)">Kelola kategori</button></div></div>
  <div id="bud"><div class="sk"></div><div class="sk"></div></div>
 </section>
 
@@ -124,6 +124,23 @@ nav{position:fixed;left:0;right:0;bottom:0;display:grid;grid-template-columns:1f
  <button class="btn" id="pcn" style="margin-top:4px;background:none;color:var(--mu)">Batal</button>
 </div></div>
 
+<div class="ov" id="okat"><div class="sheet">
+ <h2 style="margin:0 0 4px;font-size:19px">Kelola kategori</h2>
+ <p class="mu" style="white-space:normal;margin:0 0 8px">Ketuk kategori untuk mengganti nama atau menggabungkannya. Semua transaksi lama ikut berubah.</p>
+ <div class="seg" id="kj"><button data-j="out">Pengeluaran</button><button data-j="in">Pemasukan</button></div>
+ <div id="kl"></div>
+ <button class="btn" id="kcn" style="margin-top:12px;background:none;color:var(--mu)">Tutup</button>
+</div></div>
+
+<div class="ov" id="oke" style="z-index:25"><div class="sheet">
+ <h2 style="margin:0 0 4px;font-size:19px">Ubah kategori</h2>
+ <p class="mu" id="kei" style="white-space:normal;margin:0"></p>
+ <div class="lb">Nama baru</div><input id="ken" autocomplete="off">
+ <div class="lb" id="kel" hidden>Atau gabungkan ke kategori lain</div><div class="wrap" id="kec"></div>
+ <button class="btn" id="kes" style="margin-top:18px">Simpan</button>
+ <button class="btn" id="kex" style="margin-top:4px;background:none;color:var(--mu)">Batal</button>
+</div></div>
+
 <div class="ov" id="oa"><div class="sheet">
  <h2 style="margin:0 0 4px;font-size:19px">Kelola akun / rekening</h2>
  <p class="mu" style="white-space:normal;margin:0">Contoh: Mandiri, BCA, Tunai, GoPay. Saldo awal = saldo saat kamu mulai memakai akun itu di aplikasi. Mengganti nama akun tidak mengubah transaksi lama.</p>
@@ -155,7 +172,7 @@ nav{position:fixed;left:0;right:0;bottom:0;display:grid;grid-template-columns:1f
  <button class="btn" id="cgc" style="margin-top:4px;background:none;color:var(--mu)">Tutup</button>
 </div></div>
 <div class="ov mid" id="cf"><div class="sheet">
- <h3 style="margin:0 0 6px">Hapus data ini?</h3><p class="mu" id="cft" style="white-space:normal;margin:0 0 16px"></p>
+ <h3 id="cfh" style="margin:0 0 6px">Hapus data ini?</h3><p class="mu" id="cft" style="white-space:normal;margin:0 0 16px"></p>
  <div class="two"><button class="btn" id="cn2" style="background:#f1f5f9;color:var(--tx)">Batal</button><button class="btn" id="ok2" style="background:#e11d48">Hapus</button></div>
 </div></div>
 <div id="toast"></div>
@@ -185,13 +202,13 @@ async function api(a,p){
  catch(e){const x=new Error('Tidak ada koneksi internet');x.net=true;throw x}
  finally{clearTimeout(to)}
  let j;try{j=JSON.parse(txt)}catch(e){throw new Error('Alamat API tidak valid, atau akses belum diatur ke “Anyone”')}
- if(!j.ok){const x=new Error(j.err||'Gagal');if(j.auth){x.auth=true;showCfg()}throw x}
+ if(!j.ok){const x=new Error(j.err==='Aksi tidak dikenal'?'Perbarui penghubung (Code.gs versi 3) dulu':(j.err||'Gagal'));if(j.auth){x.auth=true;showCfg()}throw x}
  return j.d;
 }
 let per='bulan',typ='out',edit=null,tm,dom='',wal='Pribadi',cfAct=null,pE=null,pJ='Tabungan',pM=6,yr=new Date().getFullYear(),kSel='',tCid='';
 
 function toast(m,k){const e=$('#toast');e.textContent=m;e.className='show '+k;clearTimeout(tm);tm=setTimeout(()=>e.className='',2800)}
-function ask(txt,fn){$('#cft').textContent=txt;cfAct=fn;$('#cf').classList.add('show')}
+function ask(txt,fn,h,b){$('#cfh').textContent=h||'Hapus data ini?';$('#ok2').textContent=b||'Hapus';$('#ok2').style.background=b?'var(--g)':'#e11d48';$('#cft').textContent=txt;cfAct=fn;$('#cf').classList.add('show')}
 
 async function load(){
  if(!S.length&&!xl)$('#home').innerHTML='<div class="sk"></div><div class="sk"></div><div class="sk"></div>';
@@ -363,6 +380,49 @@ $('#ts').onclick=async()=>{
  try{await api('addTransfer',x);$('#ot').classList.remove('show');toast('Transfer tersimpan ✓','ok');await load()}
  catch(e){toast('Gagal menyimpan: '+(e.message||e),'bad')}
  b.disabled=false;b.textContent='Simpan transfer';
+};
+
+/* ===== KELOLA KATEGORI ===== */
+let kJ='out',kCur=null;
+function kats(j){
+ const M={};
+ all().filter(x=>x.t===j).forEach(x=>{const l=x.c.toLowerCase();const m=M[l]=M[l]||{l,cnt:0,tot:0,v:{}};m.cnt++;m.tot+=x.a;m.v[x.c]=(m.v[x.c]||0)+1});
+ return Object.values(M).map(m=>({...m,n:Object.keys(m.v).sort((a,b)=>m.v[b]-m.v[a])[0]})).sort((a,b)=>b.cnt-a.cnt);
+}
+const mirip=(a,b)=>{a=a.toLowerCase();b=b.toLowerCase();return a!==b&&(a.includes(b)||b.includes(a)||(a.length>=4&&b.length>=4&&a.slice(0,4)===b.slice(0,4)))};
+function rk(){
+ document.querySelectorAll('#kj button').forEach(b=>b.className=b.dataset.j===kJ?'on':'');
+ const K=kats(kJ);
+ $('#kl').innerHTML=K.length?K.map(k=>{const sim=K.filter(o=>o!==k&&mirip(k.n,o.n)).map(o=>o.n);const sp=Object.keys(k.v).length>1;
+  return `<div class="it" data-kl="${esc(k.l)}" style="cursor:pointer"><div style="flex:1;min-width:0"><b>${esc(k.n)}</b><div class="mu">${k.cnt} transaksi · ${rp(k.tot)}${sp?' · ejaan berbeda':''}${sim.length?' · ⚠ mirip: '+esc(sim.slice(0,2).join(', ')):''}</div></div><span class="mu">›</span></div>`}).join('')
+  :'<div class="empty">Belum ada kategori.</div>';
+}
+function openKE(k){
+ kCur=k;$('#kei').textContent='“'+k.n+'” · '+k.cnt+' transaksi';$('#ken').value=k.n;
+ const o=kats(kJ).filter(x=>x.l!==k.l).sort((a,b)=>(mirip(k.n,b.n)-mirip(k.n,a.n))||b.cnt-a.cnt).slice(0,10);
+ $('#kel').hidden=!o.length;
+ $('#kec').innerHTML=o.map(x=>`<button type="button" class="chip" data-kn="${esc(x.n)}">${esc(x.n)}</button>`).join('');
+ $('#oke').classList.add('show');
+}
+$('#bk').onclick=()=>{if(!xl)return toast('Data masih dimuat, coba sebentar lagi','bad');kJ='out';rk();$('#okat').classList.add('show')};
+$('#kj').onclick=e=>{if(e.target.dataset.j){kJ=e.target.dataset.j;rk()}};
+$('#kl').onclick=e=>{const r=e.target.closest('[data-kl]');if(!r)return;const k=kats(kJ).find(x=>x.l===r.dataset.kl);if(k)openKE(k)};
+$('#kec').onclick=e=>{const n=e.target.dataset.kn;if(n!==undefined)$('#ken').value=n};
+$('#kcn').onclick=()=>$('#okat').classList.remove('show');
+$('#okat').onclick=e=>{if(e.target.id==='okat')$('#okat').classList.remove('show')};
+$('#kex').onclick=()=>$('#oke').classList.remove('show');
+$('#oke').onclick=e=>{if(e.target.id==='oke')$('#oke').classList.remove('show')};
+$('#kes').onclick=()=>{
+ const ke=$('#ken').value.trim();if(!ke)return toast('Nama baru wajib diisi','bad');
+ const k=kCur,exist=kats(kJ).find(o=>o.l===ke.toLowerCase()&&o.l!==k.l);
+ const target=exist?exist.n:ke;
+ if(!exist&&ke===k.n&&Object.keys(k.v).length===1)return toast('Tidak ada perubahan','bad');
+ const msg=exist?'Gabungkan “'+k.n+'” ('+k.cnt+' transaksi) ke “'+exist.n+'”? Budget keduanya dijumlahkan.':'Ganti “'+k.n+'” menjadi “'+ke+'”? '+k.cnt+' transaksi lama ikut berubah.';
+ ask(msg,async()=>{
+  const r=await api('renameKategori',{j:kJ,dari:[k.l],ke:target});
+  Q.forEach(q=>{if(q.t===kJ&&q.c.toLowerCase()===k.l)q.c=target});LS.s('fin_q',Q);
+  $('#oke').classList.remove('show');await load();rk();toast(r.rows+' transaksi diperbarui ✓','ok');
+ },exist?'Gabungkan kategori?':'Ganti nama kategori?',exist?'Gabungkan':'Ganti');
 };
 
 function hist(){
@@ -555,7 +615,7 @@ $('#cn2').onclick=()=>$('#cf').classList.remove('show');
 $('#ok2').onclick=async()=>{
  const b=$('#ok2');b.disabled=true;
  try{await cfAct();$('#cf').classList.remove('show')}
- catch(e){toast('Gagal menghapus: '+(e.message||e),'bad')}
+ catch(e){toast('Gagal: '+(e.message||e),'bad')}
  b.disabled=false;
 };
 
